@@ -42,3 +42,10 @@ jobs:
           cd api-gateway
           chmod +x mvnw
           ./mvnw clean package -DskipTests
+
+      - name: Build Docker Images
+        run: |
+          docker build -t api-gateway ./api-gateway
+          docker build -t employee-service ./employee-service
+          docker build -t department-service ./department-service
+          docker build -t eureka-server ./eureka-server
