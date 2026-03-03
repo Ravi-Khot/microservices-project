@@ -22,19 +22,23 @@ jobs:
       - name: Build Eureka Server
         run: |
           cd eureka-server
+          chmod +x mvnw
           ./mvnw clean package -DskipTests
 
       - name: Build Employee Service
         run: |
           cd employee-service
+          chmod +x mvnw
           ./mvnw clean package -DskipTests
 
       - name: Build Department Service
         run: |
           cd department-service
+          chmod +x mvnw
           ./mvnw clean package -DskipTests
 
       - name: Build API Gateway
         run: |
           cd api-gateway
+          chmod +x mvnw
           ./mvnw clean package -DskipTests
