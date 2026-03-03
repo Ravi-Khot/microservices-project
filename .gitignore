@@ -1,0 +1,20 @@
+# Ignore old practice projects
+department-service2/
+employee-service2/
+SpringBootCrudExample/
+SpringBootCrudJPA/
+.metadata/
+
+# Ignore target folders
+**/target/
+
+# Ignore logs
+*.log
+
+# Ignore IDE files
+.idea/
+.vscode/
+*.iml
+
+# Ignore OS files
+.DS_Store
