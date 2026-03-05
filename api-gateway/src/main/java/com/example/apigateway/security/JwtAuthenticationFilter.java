@@ -31,7 +31,7 @@ public class JwtAuthenticationFilter implements WebFilter {
 
         String path = exchange.getRequest().getURI().getPath();
 
-        if (path.startsWith("/auth") || exchange.getRequest().getMethod() == HttpMethod.OPTIONS) {
+        if (path.startsWith("/auth") || path.startsWith("/actuator/health") || exchange.getRequest().getMethod() == HttpMethod.OPTIONS) {
             return chain.filter(exchange);
         }
 
