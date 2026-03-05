@@ -1,75 +1,3 @@
-//package com.example.apigateway.security;
-//
-//import org.springframework.http.HttpHeaders;
-//import org.springframework.http.HttpStatus;
-//import org.springframework.stereotype.Component;
-//import org.springframework.web.server.*;
-//
-//import io.jsonwebtoken.ExpiredJwtException;
-//import io.jsonwebtoken.JwtException;
-//import reactor.core.publisher.Mono;
-//
-//@Component
-//public class JwtAuthenticationFilter implements WebFilter {
-//
-//    @Override
-//    public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
-//
-//        String path = exchange.getRequest().getURI().getPath();
-//
-//        // Allow login
-//        if (path.startsWith("/auth")) {
-//            return chain.filter(exchange);
-//        }
-//
-//        // Allow OPTIONS
-//        if (exchange.getRequest().getMethod().name().equals("OPTIONS")) {
-//            return chain.filter(exchange);
-//        }
-//
-//        String authHeader = exchange.getRequest()
-//                .getHeaders()
-//                .getFirst(HttpHeaders.AUTHORIZATION);
-//
-//        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-//            exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
-//            return exchange.getResponse().setComplete();
-//        }
-//
-//        String token = authHeader.substring(7);
-//
-//        String role;
-//
-//        try {
-//            JwtUtil.validateToken(token);
-//            role = JwtUtil.extractRole(token);
-//        } 
-//        catch (ExpiredJwtException e) {
-//            exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
-//            return exchange.getResponse().setComplete();
-//        }
-//        catch (JwtException | IllegalArgumentException e) {
-//            exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
-//            return exchange.getResponse().setComplete();
-//        }
-//
-//        // Role-based restriction
-//        if (path.contains("/create") ||
-//            path.contains("/update") ||
-//            path.contains("/delete")) {
-//
-//            if (!"ADMIN".equals(role)) {
-//                exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
-//                return exchange.getResponse().setComplete();
-//            }
-//        }
-//
-//        return chain.filter(exchange);
-//    }
-//}
-
-
-
 package com.example.apigateway.security;
 
 import io.jsonwebtoken.ExpiredJwtException;
@@ -77,11 +5,17 @@ import io.jsonwebtoken.JwtException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.ReactiveSecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.WebFilter;
 import org.springframework.web.server.WebFilterChain;
 import reactor.core.publisher.Mono;
+
+import java.util.List;
 
 @Component
 public class JwtAuthenticationFilter implements WebFilter {
@@ -97,53 +31,42 @@ public class JwtAuthenticationFilter implements WebFilter {
 
         String path = exchange.getRequest().getURI().getPath();
 
-        // Allow login
-        if (path.startsWith("/auth")) {
+        if (path.startsWith("/auth") || exchange.getRequest().getMethod() == HttpMethod.OPTIONS) {
             return chain.filter(exchange);
         }
 
-        // Allow OPTIONS
-        if (exchange.getRequest().getMethod() == HttpMethod.OPTIONS) {
-            return chain.filter(exchange);
-        }
-
-        String authHeader = exchange.getRequest()
-                .getHeaders()
-                .getFirst(HttpHeaders.AUTHORIZATION);
+        String authHeader = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
 
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
-            return exchange.getResponse().setComplete();
+            return writeUnauthorized(exchange, "Missing bearer token");
         }
 
         String token = authHeader.substring(7);
 
-        String role;
-
         try {
             jwtUtil.validateToken(token);
-            role = jwtUtil.extractRole(token);
-        }
-        catch (ExpiredJwtException e) {
-            exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
-            return exchange.getResponse().setComplete();
-        }
-        catch (JwtException | IllegalArgumentException e) {
-            exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
-            return exchange.getResponse().setComplete();
-        }
+            String role = jwtUtil.extractRole(token);
+            String username = jwtUtil.extractUsername(token);
 
-        // ADMIN only endpoints
-        if (path.contains("/create") ||
-            path.contains("/update") ||
-            path.contains("/delete")) {
+            UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                    username,
+                    null,
+                    List.of(new SimpleGrantedAuthority("ROLE_" + role))
+            );
 
-            if (!"ADMIN".equals(role)) {
-                exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
-                return exchange.getResponse().setComplete();
-            }
+            return chain.filter(exchange)
+                    .contextWrite(ReactiveSecurityContextHolder.withAuthentication(authentication));
+        } catch (ExpiredJwtException e) {
+            return writeUnauthorized(exchange, "Token expired");
+        } catch (JwtException | IllegalArgumentException e) {
+            return writeUnauthorized(exchange, "Invalid token");
         }
+    }
 
-        return chain.filter(exchange);
+    private Mono<Void> writeUnauthorized(ServerWebExchange exchange, String message) {
+        exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+        exchange.getResponse().getHeaders().setContentType(MediaType.APPLICATION_JSON);
+        byte[] body = String.format("{\"code\":\"AUTH-401\",\"message\":\"%s\"}", message).getBytes();
+        return exchange.getResponse().writeWith(Mono.just(exchange.getResponse().bufferFactory().wrap(body)));
     }
 }

@@ -7,8 +7,8 @@ services:
     container_name: mysql
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: root@123
-      MYSQL_DATABASE: employeedb
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
     ports:
       - "3307:3306"
     volumes:
@@ -40,6 +40,10 @@ services:
     restart: on-failure
     environment:
       - SPRING_PROFILES_ACTIVE=docker
+      - EUREKA_URL=${EUREKA_URL}
+      - EMPLOYEE_DB_URL=${EMPLOYEE_DB_URL}
+      - EMPLOYEE_DB_USERNAME=${EMPLOYEE_DB_USERNAME}
+      - EMPLOYEE_DB_PASSWORD=${EMPLOYEE_DB_PASSWORD}
     depends_on:
       - mysql
       - eureka-server
@@ -55,6 +59,10 @@ services:
     restart: on-failure
     environment:
       - SPRING_PROFILES_ACTIVE=docker
+      - EUREKA_URL=${EUREKA_URL}
+      - DEPARTMENT_DB_URL=${DEPARTMENT_DB_URL}
+      - DEPARTMENT_DB_USERNAME=${DEPARTMENT_DB_USERNAME}
+      - DEPARTMENT_DB_PASSWORD=${DEPARTMENT_DB_PASSWORD}
     depends_on:
       - mysql
       - eureka-server
@@ -70,6 +78,11 @@ services:
     restart: on-failure
     environment:
       - SPRING_PROFILES_ACTIVE=docker
+      - EUREKA_URL=${EUREKA_URL}
+      - JWT_SECRET=${JWT_SECRET}
+      - GATEWAY_DB_URL=${GATEWAY_DB_URL}
+      - GATEWAY_DB_USERNAME=${GATEWAY_DB_USERNAME}
+      - GATEWAY_DB_PASSWORD=${GATEWAY_DB_PASSWORD}
     depends_on:
       - eureka-server
     ports:

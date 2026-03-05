@@ -18,3 +18,5 @@ SpringBootCrudJPA/
 
 # Ignore OS files
 .DS_Store
+# Local environment secrets
+.env
